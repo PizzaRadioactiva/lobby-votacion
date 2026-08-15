@@ -1,0 +1,375 @@
+/* =========================================================
+   Paleta y tipografia
+   Fondo: tinta oscura casi-negra, como una sala de conteo
+   Acentos: verde urna (si) / coral (no) / dorado boleta
+   ========================================================= */
+:root {
+  --tinta: #14171c;
+  --tinta-2: #1b1f26;
+  --tinta-3: #232833;
+  --linea: #323947;
+  --texto: #eef0f3;
+  --texto-tenue: #9099a8;
+  --dorado: #d9a441;
+  --verde: #4caf7d;
+  --verde-fuerte: #2f9d68;
+  --coral: #e0614f;
+  --coral-fuerte: #c94734;
+  --radio: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--tinta);
+  color: var(--texto);
+  font-family: "Iowan Old Style", "Georgia", "Palatino Linotype", serif;
+  min-height: 100vh;
+}
+
+body {
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(217, 164, 65, 0.06), transparent 45%),
+    radial-gradient(circle at 85% 100%, rgba(76, 175, 125, 0.05), transparent 45%);
+}
+
+.envoltura {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.marca {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 34px;
+}
+
+.marca .sello {
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--dorado);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--dorado);
+  flex-shrink: 0;
+}
+
+.marca .titulo {
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  color: var(--texto);
+}
+
+.marca .subtitulo {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.2;
+  margin: 0 0 8px;
+}
+
+h2 {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--texto-tenue);
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+p.detalle {
+  color: var(--texto-tenue);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin: 0 0 28px;
+}
+
+.panel {
+  background: var(--tinta-2);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  padding: 28px;
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texto-tenue);
+  margin-bottom: 8px;
+  margin-top: 18px;
+}
+label:first-child { margin-top: 0; }
+
+input[type="text"],
+input[type="password"],
+textarea {
+  width: 100%;
+  background: var(--tinta);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  color: var(--texto);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  padding: 12px 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  border-color: var(--dorado);
+}
+
+textarea { resize: vertical; min-height: 70px; }
+
+input[type="file"] {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  color: var(--texto-tenue);
+  font-size: 13.5px;
+}
+
+.boton {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: none;
+  border-radius: 7px;
+  padding: 13px 22px;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.boton:hover { filter: brightness(1.08); }
+.boton:active { transform: scale(0.98); }
+
+.boton-dorado { background: var(--dorado); color: #1a1508; }
+.boton-verde { background: var(--verde); color: #06210f; }
+.boton-coral { background: var(--coral); color: #2a0a05; }
+.boton-fantasma {
+  background: transparent;
+  color: var(--texto-tenue);
+  border: 1px solid var(--linea);
+}
+.boton-fantasma:hover { color: var(--texto); border-color: var(--texto-tenue); }
+.boton:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+
+.fila-botones { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+
+.aviso {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 13.5px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  margin: 16px 0;
+  display: none;
+}
+.aviso.mostrar { display: block; }
+.aviso.error { background: rgba(224, 97, 79, 0.12); border: 1px solid rgba(224, 97, 79, 0.4); color: #f3a99c; }
+.aviso.ok { background: rgba(76, 175, 125, 0.12); border: 1px solid rgba(76, 175, 125, 0.4); color: #9fdcb9; }
+
+.codigo-lobby {
+  font-family: "Courier New", monospace;
+  font-size: 15px;
+  background: var(--tinta);
+  border: 1px dashed var(--linea);
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: var(--dorado);
+  word-break: break-all;
+  user-select: all;
+}
+
+.enlace-secundario {
+  display: inline-block;
+  margin-top: 18px;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--texto-tenue);
+  text-decoration: none;
+  border-bottom: 1px solid var(--linea);
+}
+.enlace-secundario:hover { color: var(--texto); border-color: var(--texto-tenue); }
+
+/* Tarjetas de imagen en la lista del admin */
+.lista-imagenes { display: flex; flex-direction: column; gap: 14px; }
+
+.tarjeta-imagen {
+  display: flex;
+  gap: 16px;
+  background: var(--tinta);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 14px;
+  align-items: center;
+}
+
+.tarjeta-imagen img {
+  width: 76px;
+  height: 76px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: var(--tinta-3);
+}
+
+.tarjeta-imagen .info { flex: 1; min-width: 0; }
+.tarjeta-imagen .desc {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  color: var(--texto);
+  margin-bottom: 4px;
+}
+.tarjeta-imagen .meta {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  color: var(--texto-tenue);
+}
+
+/* Pantalla de votacion */
+.contador {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  margin-bottom: 14px;
+}
+
+.boleta {
+  background: var(--tinta-2);
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.boleta .marco-imagen {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--tinta-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.boleta .marco-imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--tinta-3);
+}
+
+.boleta .cuerpo { padding: 22px 24px 26px; }
+
+.boleta .descripcion {
+  font-size: 20px;
+  line-height: 1.4;
+  margin: 0 0 22px;
+  color: var(--texto);
+}
+
+.botones-voto { display: flex; gap: 12px; }
+.botones-voto .boton { flex: 1; padding: 16px; font-size: 15px; }
+
+.pantalla-fin {
+  text-align: center;
+  padding: 60px 20px;
+}
+.pantalla-fin .sello-final {
+  width: 60px;
+  height: 60px;
+  border: 2px solid var(--verde);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  color: var(--verde);
+  font-size: 26px;
+}
+
+/* Tabla de resultados */
+table.resultados {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+}
+table.resultados th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texto-tenue);
+  padding: 0 10px 10px;
+  border-bottom: 1px solid var(--linea);
+}
+table.resultados td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--linea);
+  vertical-align: middle;
+}
+table.resultados tr:last-child td { border-bottom: none; }
+table.resultados img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+.barra-resultado {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--tinta-3);
+  overflow: hidden;
+  width: 100%;
+  min-width: 90px;
+}
+.barra-resultado .relleno { height: 100%; background: var(--verde); }
+.pastilla {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
+.pastilla.si { background: rgba(76,175,125,0.15); color: #8fd6ac; }
+.pastilla.no { background: rgba(224,97,79,0.15); color: #f0a89c; }
+
+.vacio {
+  text-align: center;
+  color: var(--texto-tenue);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  padding: 40px 20px;
+}
+
+@media (max-width: 600px) {
+  h1 { font-size: 26px; }
+  .panel { padding: 20px; }
+  .tarjeta-imagen { flex-direction: column; align-items: flex-start; }
+  .tarjeta-imagen img { width: 100%; height: 140px; }
+}

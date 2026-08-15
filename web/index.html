@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sala de Votacion</title>
+<link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+<div class="envoltura">
+
+  <div class="marca">
+    <div class="sello">V</div>
+    <div>
+      <div class="titulo">Sala de Votacion</div>
+      <div class="subtitulo">Vota por imagenes, en vivo</div>
+    </div>
+  </div>
+
+  <h1>¿Como quieres entrar?</h1>
+  <p class="detalle">
+    Si eres el organizador, entra como administrador para crear una votacion y subir imagenes.
+    Si te compartieron un link de lobby, pega el codigo abajo para unirte y votar.
+  </p>
+
+  <div class="panel">
+    <h2>Unirme a una votacion</h2>
+    <label for="codigoLobby">Codigo o link del lobby</label>
+    <input type="text" id="codigoLobby" placeholder="Ej: a1b2c3d4 o el link completo">
+    <label for="nombreUsuario">Tu nombre</label>
+    <input type="text" id="nombreUsuario" placeholder="¿Como te llamas?">
+    <div class="aviso error" id="avisoUsuario"></div>
+    <div class="fila-botones">
+      <button class="boton boton-verde" onclick="unirse()">Entrar a votar</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Soy administrador</h2>
+    <p class="detalle" style="margin-bottom:0;">Crea una sala, sube imagenes con su descripcion y comparte el link con los votantes.</p>
+    <div class="fila-botones">
+      <a href="/admin" class="boton boton-dorado" style="text-decoration:none; display:inline-block;">Ir al panel de administrador</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function extraerCodigo(texto) {
+  texto = texto.trim();
+  const m = texto.match(/\/lobby\/([a-z0-9]+)/i);
+  if (m) return m[1];
+  return texto;
+}
+
+async function unirse() {
+  const aviso = document.getElementById('avisoUsuario');
+  aviso.classList.remove('mostrar');
+
+  const codigoRaw = document.getElementById('codigoLobby').value;
+  const nombre = document.getElementById('nombreUsuario').value.trim();
+  const codigo = extraerCodigo(codigoRaw);
+
+  if (!codigo) {
+    aviso.textContent = 'Ingresa el codigo o link del lobby.';
+    aviso.classList.add('mostrar');
+    return;
+  }
+  if (!nombre) {
+    aviso.textContent = 'Ingresa tu nombre para poder votar.';
+    aviso.classList.add('mostrar');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/lobby/unirse', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({codigo: codigo, nombre: nombre})
+    });
+    const datos = await res.json();
+    if (!res.ok) {
+      aviso.textContent = datos.error || 'No se pudo unir al lobby.';
+      aviso.classList.add('mostrar');
+      return;
+    }
+    sessionStorage.setItem('nombreUsuario', nombre);
+    window.location.href = '/lobby/' + datos.codigo;
+  } catch (e) {
+    aviso.textContent = 'Error de conexion con el servidor.';
+    aviso.classList.add('mostrar');
+  }
+}
+
+document.getElementById('nombreUsuario').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') unirse();
+});
+</script>
+</body>
+</html>
