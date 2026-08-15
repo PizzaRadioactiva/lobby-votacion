@@ -1,0 +1,5 @@
+out/
+uploads/*.png
+uploads/*.jpg
+uploads/*.jpeg
+!uploads/.gitkeep
