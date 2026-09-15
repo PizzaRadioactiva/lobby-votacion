@@ -1,9 +1,15 @@
 # Sala de Votacion — Proyecto Java + HTML + CSS
 
-Sistema de votacion de imagenes con lobby. El **administrador** crea una sala,
-sube imagenes con descripcion y comparte un link. Los **usuarios** entran con
-ese link y votan **Si / No** en cada imagen. Al final se puede ver una tabla
-de resultados con el promedio de votos y quien voto que.
+Sistema de votacion de imagenes con lobby. El **administrador** crea una sala
+y comparte un link. Mientras la sala esta abierta, tanto el administrador
+como cada **participante** pueden subir imagenes (cada participante hasta un
+maximo de 5). Cuando el administrador inicia la votacion, el orden de las
+imagenes se fija de forma **aleatoria y es el mismo para todos**: cada
+participante ve la misma imagen al mismo tiempo, vota **Si / No** y ademas
+elige a que otro participante cree que le pertenece esa imagen. Cuando todos
+terminaron de responder sobre una imagen, se revela quien la subio realmente
+y las estadisticas de quien adivino que, y recien ahi se pasa a la siguiente.
+Al final se puede ver una tabla de resultados con el detalle de todo.
 
 No usa frameworks ni librerias externas: el backend es Java puro (con la
 clase `com.sun.net.httpserver.HttpServer` que trae el propio JDK) y el
@@ -18,14 +24,14 @@ memoria**, es decir, se borran cada vez que reinicias el servidor.
 lobby-votacion/
 ├── src/main/java/lobby/
 │   ├── Servidor.java        <- servidor HTTP y todas las rutas de la API
-│   ├── Modelos.java         <- clases Lobby, Imagen, Almacen (memoria)
-│   └── MultipartParser.java <- lee las imagenes subidas por el admin
+│   ├── Modelos.java         <- clases Lobby, Imagen, Almacen (memoria, fases)
+│   └── MultipartParser.java <- lee las imagenes subidas (admin y participantes)
 ├── web/
 │   ├── index.html   <- pagina de inicio (elegir admin o usuario)
 │   ├── admin.html   <- panel de administrador
-│   ├── votar.html   <- pantalla de votacion para el usuario
+│   ├── votar.html   <- pantalla de votacion para el usuario (sala abierta + votacion sincronizada)
 │   └── estilo.css   <- estilos compartidos
-├── uploads/          <- aqui se guardan las imagenes que sube el admin
+├── uploads/          <- aqui se guardan las imagenes (admin y participantes)
 └── README.md
 ```
 
@@ -88,14 +94,28 @@ compilar (paso 1 de la seccion anterior).
 1. El administrador entra a `/admin`, pone la clave, y crea una nueva
    votacion escribiendo un nombre (ej. "Diseños para el logo").
 2. El sistema genera un **link unico**, por ejemplo:
-   `http://localhost:8080/lobby/a1b2c3d4`
-3. El administrador sube imagenes una por una, cada una con su **descripcion**.
-4. El administrador comparte el link con los votantes (por WhatsApp, correo, etc).
-5. Cada usuario abre el link, escribe su nombre, y va votando **Si / No** en
-   cada imagen, una por una.
-6. Cuando terminan, pueden ver los **resultados** (boton "Ver resultados").
-7. El administrador tambien puede ver los resultados desde su panel, con el
-   detalle de quien voto que en cada imagen.
+   `http://localhost:8080/lobby/a1b2c3d4`. El administrador lo comparte con
+   los participantes.
+3. **Sala abierta (fase "carga")**: el administrador puede subir imagenes
+   desde su panel, y cada participante que entra con el link tambien puede
+   subir las suyas propias (hasta **5 imagenes por persona**), con su
+   descripcion. Todos ven en vivo la galeria de lo que se fue subiendo.
+4. Cuando estan listos, el administrador aprieta **"Iniciar votacion"**. En
+   ese momento el servidor mezcla el orden de las imagenes al azar y lo deja
+   fijo: a partir de aqui ya no se pueden agregar mas imagenes, y todos los
+   participantes ven exactamente la misma imagen, en el mismo orden.
+5. Para cada imagen, cada participante vota **Si / No** y ademas elige a cual
+   de los demas participantes cree que pertenece la imagen (no puede
+   elegirse a si mismo; si la subio el administrador, este paso no aparece).
+6. Cuando **todos** los participantes conectados respondieron esa imagen, se
+   revela quien la subio de verdad junto con las estadisticas de quien
+   adivino a quien, y a los pocos segundos se pasa sola a la siguiente
+   imagen (la pantalla de cada participante se actualiza automaticamente,
+   sin que nadie tenga que hacer nada mas).
+7. Al terminar todas las imagenes, cualquiera puede ver los **resultados**
+   (boton "Ver resultados"). El administrador tambien puede verlos desde su
+   panel, con el detalle de quien voto que y de las adivinanzas en cada
+   imagen.
 
 ## 6. Opciones gratuitas para publicarlo en internet
 
@@ -144,5 +164,10 @@ capa gratuita real (sin tarjeta de credito obligatoria en la mayoria):
 - No hay limite de tamaño de imagen ni validacion de tipo de archivo mas
   alla de la extension. Para un uso publico masivo convendria agregar
   limites de tamaño.
+- La subida de imagenes por participantes no pide ninguna clave (solo un
+  nombre), y el limite de 5 imagenes por persona se controla por nombre de
+  usuario, sin cuentas reales. Alguien podria eludirlo usando otro nombre;
+  esta bien para un uso informal entre conocidos, pero no es una proteccion
+  fuerte.
 - Todo el codigo esta comentado en español para que sea facil de leer y
   modificar.

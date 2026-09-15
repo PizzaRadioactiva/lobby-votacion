@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Administrador — Sala de Votacion</title>
+<link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+<div class="envoltura">
+
+  <div class="marca">
+    <div class="sello">V</div>
+    <div>
+      <div class="titulo">Panel de Administrador</div>
+      <div class="subtitulo">Crear y gestionar votaciones</div>
+    </div>
+  </div>
+
+  <!-- ==================== VISTA: LOGIN ==================== -->
+  <div id="vistaLogin">
+    <h1>Acceso de administrador</h1>
+    <p class="detalle">Ingresa la clave de administrador para crear y gestionar salas de votacion.</p>
+    <div class="panel">
+      <label for="claveAdmin">Clave de administrador</label>
+      <input type="password" id="claveAdmin" placeholder="Clave">
+      <div class="aviso error" id="avisoLogin"></div>
+      <div class="fila-botones">
+        <button class="boton boton-dorado" onclick="login()">Entrar</button>
+      </div>
+    </div>
+    <a href="/" class="enlace-secundario">← Volver al inicio</a>
+  </div>
+
+  <!-- ==================== VISTA: CREAR LOBBY ==================== -->
+  <div id="vistaCrear" style="display:none;">
+    <h1>Crear nueva votacion</h1>
+    <p class="detalle">Dale un nombre a tu sala de votacion. Luego podras subir las imagenes.</p>
+    <div class="panel">
+      <label for="nombreLobby">Nombre de la votacion</label>
+      <input type="text" id="nombreLobby" placeholder="Ej: Diseños para el logo nuevo">
+      <div class="fila-botones">
+        <button class="boton boton-verde" onclick="crearLobby()">Crear sala</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== VISTA: GESTIONAR LOBBY ==================== -->
+  <div id="vistaGestion" style="display:none;">
+    <h1 id="nombreLobbyTitulo">Sala de votacion</h1>
+    <p class="detalle">
+      Comparte este link con los participantes. Ellos pueden entrar, votar y tambien subir sus propias
+      imagenes (hasta 5 cada uno) mientras la sala esta abierta. Cuando esten listos, inicia la votacion:
+      a partir de ahi el orden queda fijo y aleatorio, igual para todos, y no se pueden agregar mas imagenes.
+    </p>
+
+    <div class="panel">
+      <h2>Link para compartir</h2>
+      <div class="codigo-lobby" id="linkLobby"></div>
+      <div class="fila-botones">
+        <button class="boton boton-fantasma" onclick="copiarLink()">Copiar link</button>
+        <button class="boton boton-fantasma" onclick="cargarGestion()">Actualizar</button>
+        <button class="boton boton-fantasma" onclick="verResultados()">Ver resultados</button>
+        <span id="totalUsuariosTexto" style="font-family:'Helvetica Neue',Arial,sans-serif; font-size:13px; color:var(--texto-tenue); align-self:center;"></span>
+      </div>
+    </div>
+
+    <div class="panel" id="panelEstadoVotacion">
+      <h2>Estado de la votacion</h2>
+      <div class="insignia-fase" id="insigniaFase"></div>
+      <p class="detalle" id="descripcionFase" style="margin:14px 0 0;"></p>
+      <div class="fila-botones">
+        <button class="boton boton-verde" id="btnIniciarVotacion" onclick="iniciarVotacion()">Iniciar votacion</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panelAgregarImagen">
+      <h2>Agregar imagen</h2>
+      <label for="archivoImagen">Imagen</label>
+      <input type="file" id="archivoImagen" accept="image/*">
+      <label for="descImagen">Descripcion (esto lo vera quien vota)</label>
+      <textarea id="descImagen" placeholder="Describe la imagen para dar contexto a los votantes..."></textarea>
+      <div class="aviso error" id="avisoImagen"></div>
+      <div class="aviso ok" id="avisoImagenOk"></div>
+      <div class="fila-botones">
+        <button class="boton boton-dorado" id="btnSubir" onclick="subirImagen()">Subir imagen</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Imagenes en esta votacion</h2>
+      <div class="lista-imagenes" id="listaImagenes"></div>
+      <div class="vacio" id="listaVacia" style="display:none;">Aun no hay ninguna imagen.</div>
+    </div>
+
+    <div class="fila-botones">
+      <button class="boton boton-fantasma" onclick="nuevaVotacion()">+ Crear otra votacion</button>
+    </div>
+  </div>
+
+  <!-- ==================== VISTA: RESULTADOS ==================== -->
+  <div id="vistaResultados" style="display:none;">
+    <h1 id="nombreResultadosTitulo">Resultados</h1>
+    <p class="detalle" id="resumenResultados"></p>
+
+    <div class="panel">
+      <table class="resultados" id="tablaResultados">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Descripcion</th>
+            <th>Si / No</th>
+            <th>Proporcion</th>
+            <th>Votantes</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoTablaResultados"></tbody>
+      </table>
+      <div class="vacio" id="resultadosVacio" style="display:none;">Todavia no hay imagenes o votos en esta sala.</div>
+    </div>
+
+    <div class="fila-botones">
+      <button class="boton boton-fantasma" onclick="volverGestion()">← Volver a la gestion</button>
+      <button class="boton boton-fantasma" onclick="verResultados()">Actualizar</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let CLAVE = '';
+let CODIGO_ACTUAL = '';
+
+function mostrarVista(id) {
+  ['vistaLogin','vistaCrear','vistaGestion','vistaResultados'].forEach(v => {
+    document.getElementById(v).style.display = (v === id) ? 'block' : 'none';
+  });
+}
+
+async function login() {
+  const aviso = document.getElementById('avisoLogin');
+  aviso.classList.remove('mostrar');
+  const clave = document.getElementById('claveAdmin').value;
+
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({clave: clave})
+    });
+    if (!res.ok) {
+      aviso.textContent = 'Clave incorrecta.';
+      aviso.classList.add('mostrar');
+      return;
+    }
+    CLAVE = clave;
+    mostrarVista('vistaCrear');
+  } catch (e) {
+    aviso.textContent = 'Error de conexion con el servidor.';
+    aviso.classList.add('mostrar');
+  }
+}
+
+document.getElementById('claveAdmin').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') login();
+});
+
+async function crearLobby() {
+  const nombre = document.getElementById('nombreLobby').value.trim() || 'Votacion sin nombre';
+  const res = await fetch('/api/admin/crear-lobby', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({clave: CLAVE, nombre: nombre})
+  });
+  const datos = await res.json();
+  if (!res.ok) { alert(datos.error || 'No se pudo crear la sala.'); return; }
+
+  CODIGO_ACTUAL = datos.codigo;
+  document.getElementById('nombreLobbyTitulo').textContent = nombre;
+  document.getElementById('linkLobby').textContent = window.location.origin + '/lobby/' + datos.codigo;
+  mostrarVista('vistaGestion');
+  cargarGestion();
+}
+
+function nuevaVotacion() {
+  document.getElementById('nombreLobby').value = '';
+  mostrarVista('vistaCrear');
+}
+
+function copiarLink() {
+  const texto = document.getElementById('linkLobby').textContent;
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = event.target;
+    const original = btn.textContent;
+    btn.textContent = '¡Copiado!';
+    setTimeout(() => btn.textContent = original, 1500);
+  });
+}
+
+const TEXTOS_FASE = {
+  carga: 'Sala abierta: se pueden subir imagenes (el admin y cada participante, hasta 5).',
+  votando: 'Votacion en curso: el orden ya quedo fijo y no se pueden agregar mas imagenes.',
+  terminado: 'La votacion ya termino. Podes ver los resultados finales.'
+};
+
+async function cargarGestion() {
+  const res = await fetch('/api/admin/lobby?codigo=' + encodeURIComponent(CODIGO_ACTUAL) + '&clave=' + encodeURIComponent(CLAVE));
+  const datos = await res.json();
+  if (!res.ok) return;
+
+  document.getElementById('totalUsuariosTexto').textContent = datos.totalUsuarios + ' usuario(s) conectado(s)';
+
+  const fase = datos.fase || 'carga';
+  const insignia = document.getElementById('insigniaFase');
+  insignia.textContent = fase === 'carga' ? 'Sala abierta' : (fase === 'votando' ? 'Votando' : 'Terminado');
+  insignia.className = 'insignia-fase ' + fase;
+  document.getElementById('descripcionFase').textContent = TEXTOS_FASE[fase] || '';
+
+  const btnIniciar = document.getElementById('btnIniciarVotacion');
+  btnIniciar.style.display = fase === 'carga' ? 'inline-block' : 'none';
+  btnIniciar.disabled = datos.imagenes.length === 0;
+
+  document.getElementById('panelAgregarImagen').style.display = fase === 'carga' ? 'block' : 'none';
+
+  const lista = document.getElementById('listaImagenes');
+  lista.innerHTML = '';
+  if (datos.imagenes.length === 0) {
+    document.getElementById('listaVacia').style.display = 'block';
+  } else {
+    document.getElementById('listaVacia').style.display = 'none';
+    datos.imagenes.forEach(img => {
+      const div = document.createElement('div');
+      div.className = 'tarjeta-imagen';
+      const autor = img.subidoPor ? escaparHtml(img.subidoPor) : 'Administrador';
+      div.innerHTML = `
+        <img src="${img.url}" alt="">
+        <div class="info">
+          <div class="desc">${escaparHtml(img.descripcion || '(sin descripcion)')}</div>
+          <div class="meta">Subida por ${autor} · ${img.totalVotos} voto(s) · ${img.totalSi} si · ${img.totalNo} no</div>
+        </div>
+      `;
+      lista.appendChild(div);
+    });
+  }
+}
+
+async function iniciarVotacion() {
+  const btn = document.getElementById('btnIniciarVotacion');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/admin/iniciar-votacion', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({clave: CLAVE, codigo: CODIGO_ACTUAL})
+    });
+    const datos = await res.json();
+    if (!res.ok) {
+      alert(datos.error || 'No se pudo iniciar la votacion.');
+      btn.disabled = false;
+      return;
+    }
+    cargarGestion();
+  } catch (e) {
+    alert('Error de conexion con el servidor.');
+    btn.disabled = false;
+  }
+}
+
+async function subirImagen() {
+  const archivo = document.getElementById('archivoImagen').files[0];
+  const descripcion = document.getElementById('descImagen').value.trim();
+  const avisoErr = document.getElementById('avisoImagen');
+  const avisoOk = document.getElementById('avisoImagenOk');
+  avisoErr.classList.remove('mostrar');
+  avisoOk.classList.remove('mostrar');
+
+  if (!archivo) {
+    avisoErr.textContent = 'Selecciona una imagen primero.';
+    avisoErr.classList.add('mostrar');
+    return;
+  }
+
+  const btn = document.getElementById('btnSubir');
+  btn.disabled = true;
+  btn.textContent = 'Subiendo...';
+
+  const formData = new FormData();
+  formData.append('clave', CLAVE);
+  formData.append('codigo', CODIGO_ACTUAL);
+  formData.append('descripcion', descripcion);
+  formData.append('archivo', archivo);
+
+  try {
+    const res = await fetch('/api/admin/subir-imagen', { method: 'POST', body: formData });
+    const datos = await res.json();
+    if (!res.ok) {
+      avisoErr.textContent = datos.error || 'No se pudo subir la imagen.';
+      avisoErr.classList.add('mostrar');
+      return;
+    }
+    avisoOk.textContent = 'Imagen agregada correctamente.';
+    avisoOk.classList.add('mostrar');
+    document.getElementById('archivoImagen').value = '';
+    document.getElementById('descImagen').value = '';
+    cargarGestion();
+  } catch (e) {
+    avisoErr.textContent = 'Error de conexion con el servidor.';
+    avisoErr.classList.add('mostrar');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Subir imagen';
+  }
+}
+
+async function verResultados() {
+  const res = await fetch('/api/lobby/resultados?codigo=' + encodeURIComponent(CODIGO_ACTUAL));
+  const datos = await res.json();
+  if (!res.ok) { alert(datos.error || 'No se pudieron cargar los resultados.'); return; }
+
+  document.getElementById('nombreResultadosTitulo').textContent = 'Resultados — ' + datos.nombre;
+  document.getElementById('resumenResultados').textContent = datos.totalUsuarios + ' usuario(s) se han unido a esta votacion.';
+
+  const cuerpo = document.getElementById('cuerpoTablaResultados');
+  cuerpo.innerHTML = '';
+
+  if (datos.imagenes.length === 0) {
+    document.getElementById('resultadosVacio').style.display = 'block';
+  } else {
+    document.getElementById('resultadosVacio').style.display = 'none';
+    datos.imagenes.forEach(img => {
+      const votantesTexto = img.votantes.map(v => `<span class="pastilla ${v.voto ? 'si' : 'no'}">${escaparHtml(v.usuario)}</span>`).join(' ');
+      const autor = img.subidoPor ? escaparHtml(img.subidoPor) : 'Administrador';
+      const adivinanzasTexto = (img.estadisticasAdivinanza || [])
+        .slice().sort((a, b) => b.votos - a.votos)
+        .map(e => `${escaparHtml(e.nombre)}${e.nombre === img.subidoPor ? ' ✓' : ''} (${e.votos})`)
+        .join(', ');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><img src="${img.url}" alt=""></td>
+        <td>${escaparHtml(img.descripcion || '(sin descripcion)')}<div class="meta-resultado">Subida por ${autor}${adivinanzasTexto ? ' · Adivinanzas: ' + adivinanzasTexto : ''}</div></td>
+        <td>${img.totalSi} si / ${img.totalNo} no</td>
+        <td>
+          <div class="barra-resultado"><div class="relleno" style="width:${img.porcentajeSi}%"></div></div>
+          <div style="font-size:11px; color:var(--texto-tenue); margin-top:4px; font-family:'Helvetica Neue',Arial,sans-serif;">${img.porcentajeSi}% a favor</div>
+        </td>
+        <td>${votantesTexto || '<span style="color:var(--texto-tenue); font-family:\'Helvetica Neue\',Arial,sans-serif; font-size:12px;">Sin votos aun</span>'}</td>
+      `;
+      cuerpo.appendChild(tr);
+    });
+  }
+
+  mostrarVista('vistaResultados');
+}
+
+function volverGestion() {
+  mostrarVista('vistaGestion');
+  cargarGestion();
+}
+
+function escaparHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>
