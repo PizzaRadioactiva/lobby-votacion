@@ -48,19 +48,33 @@
   <!-- ==================== VISTA: GESTIONAR LOBBY ==================== -->
   <div id="vistaGestion" style="display:none;">
     <h1 id="nombreLobbyTitulo">Sala de votacion</h1>
-    <p class="detalle">Comparte este link con los votantes. Cualquiera con el link puede entrar y votar.</p>
+    <p class="detalle">
+      Comparte este link con los participantes. Ellos pueden entrar, votar y tambien subir sus propias
+      imagenes (hasta 5 cada uno) mientras la sala esta abierta. Cuando esten listos, inicia la votacion:
+      a partir de ahi el orden queda fijo y aleatorio, igual para todos, y no se pueden agregar mas imagenes.
+    </p>
 
     <div class="panel">
       <h2>Link para compartir</h2>
       <div class="codigo-lobby" id="linkLobby"></div>
       <div class="fila-botones">
         <button class="boton boton-fantasma" onclick="copiarLink()">Copiar link</button>
+        <button class="boton boton-fantasma" onclick="cargarGestion()">Actualizar</button>
         <button class="boton boton-fantasma" onclick="verResultados()">Ver resultados</button>
         <span id="totalUsuariosTexto" style="font-family:'Helvetica Neue',Arial,sans-serif; font-size:13px; color:var(--texto-tenue); align-self:center;"></span>
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="panelEstadoVotacion">
+      <h2>Estado de la votacion</h2>
+      <div class="insignia-fase" id="insigniaFase"></div>
+      <p class="detalle" id="descripcionFase" style="margin:14px 0 0;"></p>
+      <div class="fila-botones">
+        <button class="boton boton-verde" id="btnIniciarVotacion" onclick="iniciarVotacion()">Iniciar votacion</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panelAgregarImagen">
       <h2>Agregar imagen</h2>
       <label for="archivoImagen">Imagen</label>
       <input type="file" id="archivoImagen" accept="image/*">
@@ -76,7 +90,7 @@
     <div class="panel">
       <h2>Imagenes en esta votacion</h2>
       <div class="lista-imagenes" id="listaImagenes"></div>
-      <div class="vacio" id="listaVacia" style="display:none;">Aun no has subido ninguna imagen.</div>
+      <div class="vacio" id="listaVacia" style="display:none;">Aun no hay ninguna imagen.</div>
     </div>
 
     <div class="fila-botones">
@@ -183,12 +197,30 @@ function copiarLink() {
   });
 }
 
+const TEXTOS_FASE = {
+  carga: 'Sala abierta: se pueden subir imagenes (el admin y cada participante, hasta 5).',
+  votando: 'Votacion en curso: el orden ya quedo fijo y no se pueden agregar mas imagenes.',
+  terminado: 'La votacion ya termino. Podes ver los resultados finales.'
+};
+
 async function cargarGestion() {
   const res = await fetch('/api/admin/lobby?codigo=' + encodeURIComponent(CODIGO_ACTUAL) + '&clave=' + encodeURIComponent(CLAVE));
   const datos = await res.json();
   if (!res.ok) return;
 
   document.getElementById('totalUsuariosTexto').textContent = datos.totalUsuarios + ' usuario(s) conectado(s)';
+
+  const fase = datos.fase || 'carga';
+  const insignia = document.getElementById('insigniaFase');
+  insignia.textContent = fase === 'carga' ? 'Sala abierta' : (fase === 'votando' ? 'Votando' : 'Terminado');
+  insignia.className = 'insignia-fase ' + fase;
+  document.getElementById('descripcionFase').textContent = TEXTOS_FASE[fase] || '';
+
+  const btnIniciar = document.getElementById('btnIniciarVotacion');
+  btnIniciar.style.display = fase === 'carga' ? 'inline-block' : 'none';
+  btnIniciar.disabled = datos.imagenes.length === 0;
+
+  document.getElementById('panelAgregarImagen').style.display = fase === 'carga' ? 'block' : 'none';
 
   const lista = document.getElementById('listaImagenes');
   lista.innerHTML = '';
@@ -199,15 +231,38 @@ async function cargarGestion() {
     datos.imagenes.forEach(img => {
       const div = document.createElement('div');
       div.className = 'tarjeta-imagen';
+      const autor = img.subidoPor ? escaparHtml(img.subidoPor) : 'Administrador';
       div.innerHTML = `
         <img src="${img.url}" alt="">
         <div class="info">
           <div class="desc">${escaparHtml(img.descripcion || '(sin descripcion)')}</div>
-          <div class="meta">${img.totalVotos} voto(s) · ${img.totalSi} si · ${img.totalNo} no</div>
+          <div class="meta">Subida por ${autor} · ${img.totalVotos} voto(s) · ${img.totalSi} si · ${img.totalNo} no</div>
         </div>
       `;
       lista.appendChild(div);
     });
+  }
+}
+
+async function iniciarVotacion() {
+  const btn = document.getElementById('btnIniciarVotacion');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/admin/iniciar-votacion', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({clave: CLAVE, codigo: CODIGO_ACTUAL})
+    });
+    const datos = await res.json();
+    if (!res.ok) {
+      alert(datos.error || 'No se pudo iniciar la votacion.');
+      btn.disabled = false;
+      return;
+    }
+    cargarGestion();
+  } catch (e) {
+    alert('Error de conexion con el servidor.');
+    btn.disabled = false;
   }
 }
 
@@ -274,10 +329,15 @@ async function verResultados() {
     document.getElementById('resultadosVacio').style.display = 'none';
     datos.imagenes.forEach(img => {
       const votantesTexto = img.votantes.map(v => `<span class="pastilla ${v.voto ? 'si' : 'no'}">${escaparHtml(v.usuario)}</span>`).join(' ');
+      const autor = img.subidoPor ? escaparHtml(img.subidoPor) : 'Administrador';
+      const adivinanzasTexto = (img.estadisticasAdivinanza || [])
+        .slice().sort((a, b) => b.votos - a.votos)
+        .map(e => `${escaparHtml(e.nombre)}${e.nombre === img.subidoPor ? ' ✓' : ''} (${e.votos})`)
+        .join(', ');
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><img src="${img.url}" alt=""></td>
-        <td>${escaparHtml(img.descripcion || '(sin descripcion)')}</td>
+        <td>${escaparHtml(img.descripcion || '(sin descripcion)')}<div class="meta-resultado">Subida por ${autor}${adivinanzasTexto ? ' · Adivinanzas: ' + adivinanzasTexto : ''}</div></td>
         <td>${img.totalSi} si / ${img.totalNo} no</td>
         <td>
           <div class="barra-resultado"><div class="relleno" style="width:${img.porcentajeSi}%"></div></div>

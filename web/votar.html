@@ -20,18 +20,47 @@
   <!-- ==================== VISTA: PEDIR NOMBRE (si no viene de la home) ==================== -->
   <div id="vistaNombre" style="display:none;">
     <h1>Antes de empezar</h1>
-    <p class="detalle">¿Como te llamas? Asi identificamos tu voto.</p>
+    <p class="detalle">¿Como te llamas? Asi identificamos tu voto y tus imagenes.</p>
     <div class="panel">
       <label for="nombreInput">Tu nombre</label>
       <input type="text" id="nombreInput" placeholder="¿Como te llamas?">
       <div class="aviso error" id="avisoNombre"></div>
       <div class="fila-botones">
-        <button class="boton boton-verde" onclick="confirmarNombre()">Empezar a votar</button>
+        <button class="boton boton-verde" onclick="confirmarNombre()">Empezar</button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== VISTA: VOTANDO ==================== -->
+  <!-- ==================== VISTA: CARGA (esperando inicio, se pueden subir imagenes) ==================== -->
+  <div id="vistaCarga" style="display:none;">
+    <h1>Sala abierta</h1>
+    <p class="detalle">Podes subir tus propias imagenes (hasta 5) mientras esperamos. Cuando el administrador inicie
+      la votacion, vas a ver las imagenes una por una, en el mismo orden que el resto de los participantes.</p>
+
+    <div class="panel">
+      <h2>Subi tus imagenes</h2>
+      <div class="contador-subida" id="contadorSubidaTexto"></div>
+      <label for="archivoPropio">Imagen</label>
+      <input type="file" id="archivoPropio" accept="image/*">
+      <label for="descPropia">Descripcion (opcional)</label>
+      <textarea id="descPropia" placeholder="Dale una pista o contexto a quien vote..."></textarea>
+      <div class="aviso error" id="avisoSubida"></div>
+      <div class="aviso ok" id="avisoSubidaOk"></div>
+      <div class="fila-botones">
+        <button class="boton boton-dorado" id="btnSubirPropia" onclick="subirImagenPropia()">Subir imagen</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Imagenes cargadas hasta ahora</h2>
+      <div class="lista-imagenes" id="galeriaCarga"></div>
+      <div class="vacio" id="galeriaVacia" style="display:none;">Todavia no hay imagenes.</div>
+    </div>
+
+    <div class="espera-admin" id="esperaAdminTexto">Esperando a que el administrador inicie la votacion...</div>
+  </div>
+
+  <!-- ==================== VISTA: VOTANDO (sincronizada) ==================== -->
   <div id="vistaVotar" style="display:none;">
     <div class="contador" id="contadorTexto"></div>
 
@@ -41,19 +70,38 @@
       </div>
       <div class="cuerpo">
         <p class="descripcion" id="descripcionActual"></p>
-        <div class="botones-voto">
-          <button class="boton boton-coral" onclick="votar(false)">No</button>
-          <button class="boton boton-verde" onclick="votar(true)">Si</button>
+
+        <!-- controles de voto -->
+        <div id="controlesVoto">
+          <div class="botones-voto">
+            <button class="boton boton-coral" id="btnNo" onclick="elegirVoto(false)">No</button>
+            <button class="boton boton-verde" id="btnSi" onclick="elegirVoto(true)">Si</button>
+          </div>
+
+          <div id="bloqueAdivinanza" style="display:none;">
+            <label>¿Quien crees que subio esta imagen?</label>
+            <div class="chips" id="chipsParticipantes"></div>
+          </div>
+
+          <div class="aviso error" id="avisoVoto"></div>
+
+          <div class="fila-botones">
+            <button class="boton boton-dorado" id="btnConfirmarVoto" onclick="confirmarVoto()" disabled>Confirmar</button>
+          </div>
+        </div>
+
+        <!-- esperando a los demas -->
+        <div id="bloqueEsperando" style="display:none;" class="espera-admin">Ya votaste en esta imagen. Esperando a que todos terminen...</div>
+
+        <!-- revelacion -->
+        <div id="bloqueRevelacion" style="display:none;">
+          <div class="revelacion">
+            <div class="revelacion-autor" id="revelacionAutor"></div>
+            <div class="revelacion-votos" id="revelacionVotos"></div>
+            <div class="revelacion-adivinanzas" id="revelacionAdivinanzas"></div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- ==================== VISTA: SIN IMAGENES ==================== -->
-  <div id="vistaSinImagenes" style="display:none;" class="panel">
-    <div class="vacio">El administrador aun no ha subido imagenes para votar. Vuelve a intentarlo en un momento.</div>
-    <div class="fila-botones" style="justify-content:center;">
-      <button class="boton boton-fantasma" onclick="location.reload()">Actualizar</button>
     </div>
   </div>
 
@@ -62,7 +110,7 @@
     <div class="panel pantalla-fin">
       <div class="sello-final">✓</div>
       <h1>¡Listo, gracias por votar!</h1>
-      <p class="detalle" style="margin-bottom:0;">Ya votaste en todas las imagenes de esta sala.</p>
+      <p class="detalle" style="margin-bottom:0;">Ya se paso por todas las imagenes de esta sala.</p>
     </div>
     <div class="fila-botones" style="justify-content:center;">
       <button class="boton boton-fantasma" onclick="verResultadosPublicos()">Ver resultados</button>
@@ -93,13 +141,24 @@
 <script>
 const CODIGO = window.location.pathname.split('/lobby/')[1];
 let NOMBRE = sessionStorage.getItem('nombreUsuario') || '';
-let IMAGENES = [];
-let INDICE = 0;
+
+let POLL_TIMER = null;
+let IMAGEN_MOSTRADA = null;     // id de la imagen que esta actualmente en pantalla
+let VOTO_SELECCIONADO = null;   // true / false / null
+let ADIVINANZA_SELECCIONADA = null;
+let REQUIERE_ADIVINANZA_ACTUAL = false;
+let FASE_ANTERIOR = null;
 
 function mostrarVista(id) {
-  ['vistaNombre','vistaVotar','vistaSinImagenes','vistaFin','vistaResultados'].forEach(v => {
+  ['vistaNombre','vistaCarga','vistaVotar','vistaFin','vistaResultados'].forEach(v => {
     document.getElementById(v).style.display = (v === id) ? 'block' : 'none';
   });
+}
+
+function escaparHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
 }
 
 async function iniciar() {
@@ -107,12 +166,10 @@ async function iniciar() {
     document.body.innerHTML = '<div class="envoltura"><div class="panel"><div class="vacio">Link de lobby invalido.</div></div></div>';
     return;
   }
-
   if (!NOMBRE) {
     mostrarVista('vistaNombre');
     return;
   }
-
   await unirseYcargar();
 }
 
@@ -143,60 +200,276 @@ async function unirseYcargar() {
       return;
     }
     document.getElementById('nombreLobbyTitulo').textContent = datosUnir.nombre;
-    document.getElementById('nombreVotanteTexto').textContent = 'Votando como ' + NOMBRE;
+    document.getElementById('nombreVotanteTexto').textContent = 'Entraste como ' + NOMBRE;
 
-    await cargarImagenes();
+    await pollEstado();
+    if (POLL_TIMER) clearInterval(POLL_TIMER);
+    POLL_TIMER = setInterval(pollEstado, 1600);
   } catch (e) {
     document.body.innerHTML = '<div class="envoltura"><div class="panel"><div class="vacio">Error de conexion con el servidor.</div></div></div>';
   }
 }
 
-async function cargarImagenes() {
-  const res = await fetch('/api/lobby/info?codigo=' + encodeURIComponent(CODIGO));
-  const datos = await res.json();
-  if (!res.ok) return;
+async function pollEstado() {
+  try {
+    const res = await fetch('/api/lobby/estado?codigo=' + encodeURIComponent(CODIGO) + '&usuario=' + encodeURIComponent(NOMBRE));
+    const datos = await res.json();
+    if (!res.ok) return;
 
-  IMAGENES = datos.imagenes;
-  if (IMAGENES.length === 0) {
-    mostrarVista('vistaSinImagenes');
+    if (datos.fase === 'carga') {
+      renderCarga(datos);
+    } else if (datos.fase === 'votando') {
+      renderVotando(datos);
+    } else if (datos.fase === 'terminado') {
+      if (POLL_TIMER) { clearInterval(POLL_TIMER); POLL_TIMER = null; }
+      mostrarVista('vistaFin');
+    }
+    FASE_ANTERIOR = datos.fase;
+  } catch (e) {
+    // si falla un poll, no rompemos la pantalla, se reintenta en el siguiente ciclo
+  }
+}
+
+// ==================== FASE: CARGA ====================
+
+function renderCarga(datos) {
+  mostrarVista('vistaCarga');
+
+  document.getElementById('contadorSubidaTexto').textContent =
+    'Subiste ' + datos.misImagenes + ' de ' + datos.maxImagenes + ' imagenes permitidas.';
+
+  const btn = document.getElementById('btnSubirPropia');
+  btn.disabled = datos.misImagenes >= datos.maxImagenes;
+  if (btn.disabled) btn.textContent = 'Alcanzaste el limite';
+  else if (btn.textContent === 'Alcanzaste el limite') btn.textContent = 'Subir imagen';
+
+  const galeria = document.getElementById('galeriaCarga');
+  galeria.innerHTML = '';
+  if (!datos.imagenes || datos.imagenes.length === 0) {
+    document.getElementById('galeriaVacia').style.display = 'block';
+  } else {
+    document.getElementById('galeriaVacia').style.display = 'none';
+    datos.imagenes.forEach(img => {
+      const div = document.createElement('div');
+      div.className = 'tarjeta-imagen';
+      const autor = img.subidoPor ? escaparHtml(img.subidoPor) : 'Administrador';
+      div.innerHTML = `
+        <img src="${img.url}" alt="">
+        <div class="info">
+          <div class="desc">${escaparHtml(img.descripcion || '(sin descripcion)')}</div>
+          <div class="meta">Subida por ${autor}</div>
+        </div>
+      `;
+      galeria.appendChild(div);
+    });
+  }
+
+  document.getElementById('esperaAdminTexto').textContent =
+    datos.totalImagenes > 0
+      ? 'Esperando a que el administrador inicie la votacion...'
+      : 'Esperando imagenes y a que el administrador inicie la votacion...';
+}
+
+async function subirImagenPropia() {
+  const archivo = document.getElementById('archivoPropio').files[0];
+  const descripcion = document.getElementById('descPropia').value.trim();
+  const avisoErr = document.getElementById('avisoSubida');
+  const avisoOk = document.getElementById('avisoSubidaOk');
+  avisoErr.classList.remove('mostrar');
+  avisoOk.classList.remove('mostrar');
+
+  if (!archivo) {
+    avisoErr.textContent = 'Selecciona una imagen primero.';
+    avisoErr.classList.add('mostrar');
     return;
   }
-  INDICE = 0;
-  mostrarVista('vistaVotar');
-  mostrarImagenActual();
-}
 
-function mostrarImagenActual() {
-  const img = IMAGENES[INDICE];
-  document.getElementById('imagenActual').src = img.url;
-  document.getElementById('descripcionActual').textContent = img.descripcion || '(sin descripcion)';
-  document.getElementById('contadorTexto').textContent = 'Imagen ' + (INDICE + 1) + ' de ' + IMAGENES.length;
-}
+  const btn = document.getElementById('btnSubirPropia');
+  btn.disabled = true;
+  const textoOriginal = btn.textContent;
+  btn.textContent = 'Subiendo...';
 
-async function votar(valor) {
-  const img = IMAGENES[INDICE];
-  const botones = document.querySelectorAll('.botones-voto .boton');
-  botones.forEach(b => b.disabled = true);
+  const formData = new FormData();
+  formData.append('codigo', CODIGO);
+  formData.append('nombre', NOMBRE);
+  formData.append('descripcion', descripcion);
+  formData.append('archivo', archivo);
 
   try {
-    await fetch('/api/lobby/votar', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({codigo: CODIGO, imagenId: img.id, usuario: NOMBRE, voto: valor})
-    });
+    const res = await fetch('/api/lobby/subir-imagen', { method: 'POST', body: formData });
+    const datos = await res.json();
+    if (!res.ok) {
+      avisoErr.textContent = datos.error || 'No se pudo subir la imagen.';
+      avisoErr.classList.add('mostrar');
+      btn.disabled = false;
+      btn.textContent = textoOriginal;
+      return;
+    }
+    avisoOk.textContent = 'Imagen agregada.';
+    avisoOk.classList.add('mostrar');
+    document.getElementById('archivoPropio').value = '';
+    document.getElementById('descPropia').value = '';
+    await pollEstado();
   } catch (e) {
-    // seguimos igual aunque falle, no queremos trabar al usuario
-  }
-
-  botones.forEach(b => b.disabled = false);
-
-  INDICE++;
-  if (INDICE >= IMAGENES.length) {
-    mostrarVista('vistaFin');
-  } else {
-    mostrarImagenActual();
+    avisoErr.textContent = 'Error de conexion con el servidor.';
+    avisoErr.classList.add('mostrar');
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
   }
 }
+
+// ==================== FASE: VOTANDO ====================
+
+function renderVotando(datos) {
+  mostrarVista('vistaVotar');
+
+  if (!datos.imagen) {
+    // caso raro: todavia no hay imagen activa
+    document.getElementById('controlesVoto').style.display = 'none';
+    document.getElementById('bloqueEsperando').style.display = 'block';
+    document.getElementById('bloqueRevelacion').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('contadorTexto').textContent =
+    'Imagen ' + (datos.indiceActual + 1) + ' de ' + datos.totalImagenes;
+
+  if (IMAGEN_MOSTRADA !== datos.imagen.id) {
+    IMAGEN_MOSTRADA = datos.imagen.id;
+    VOTO_SELECCIONADO = null;
+    ADIVINANZA_SELECCIONADA = null;
+    document.getElementById('imagenActual').src = datos.imagen.url;
+    document.getElementById('descripcionActual').textContent = datos.imagen.descripcion || '(sin descripcion)';
+    document.getElementById('btnSi').classList.remove('seleccionado');
+    document.getElementById('btnNo').classList.remove('seleccionado');
+    document.getElementById('avisoVoto').classList.remove('mostrar');
+  }
+
+  REQUIERE_ADIVINANZA_ACTUAL = datos.imagen.requiereAdivinanza;
+  document.getElementById('bloqueAdivinanza').style.display = REQUIERE_ADIVINANZA_ACTUAL ? 'block' : 'none';
+
+  if (REQUIERE_ADIVINANZA_ACTUAL) {
+    const cont = document.getElementById('chipsParticipantes');
+    const yaTieneChips = cont.dataset.imagenId === datos.imagen.id;
+    if (!yaTieneChips) {
+      cont.innerHTML = '';
+      cont.dataset.imagenId = datos.imagen.id;
+      (datos.participantesParaAdivinar || []).forEach(nombre => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = nombre;
+        chip.onclick = () => seleccionarAdivinanza(nombre);
+        cont.appendChild(chip);
+      });
+    }
+  }
+
+  if (datos.revelada) {
+    document.getElementById('controlesVoto').style.display = 'none';
+    document.getElementById('bloqueEsperando').style.display = 'none';
+    document.getElementById('bloqueRevelacion').style.display = 'block';
+    mostrarRevelacion(datos.revelacion);
+    return;
+  }
+
+  document.getElementById('bloqueRevelacion').style.display = 'none';
+
+  const yaCompleto = datos.yoVote && (!REQUIERE_ADIVINANZA_ACTUAL || datos.yoAdivine);
+  if (yaCompleto) {
+    document.getElementById('controlesVoto').style.display = 'none';
+    document.getElementById('bloqueEsperando').style.display = 'block';
+  } else {
+    document.getElementById('controlesVoto').style.display = 'block';
+    document.getElementById('bloqueEsperando').style.display = 'none';
+    actualizarBotonConfirmar();
+  }
+}
+
+function elegirVoto(valor) {
+  VOTO_SELECCIONADO = valor;
+  document.getElementById('btnSi').classList.toggle('seleccionado', valor === true);
+  document.getElementById('btnNo').classList.toggle('seleccionado', valor === false);
+  actualizarBotonConfirmar();
+}
+
+function seleccionarAdivinanza(nombre) {
+  ADIVINANZA_SELECCIONADA = nombre;
+  document.querySelectorAll('#chipsParticipantes .chip').forEach(chip => {
+    chip.classList.toggle('seleccionado', chip.textContent === nombre);
+  });
+  actualizarBotonConfirmar();
+}
+
+function actualizarBotonConfirmar() {
+  const listo = VOTO_SELECCIONADO !== null && (!REQUIERE_ADIVINANZA_ACTUAL || ADIVINANZA_SELECCIONADA !== null);
+  document.getElementById('btnConfirmarVoto').disabled = !listo;
+}
+
+async function confirmarVoto() {
+  const aviso = document.getElementById('avisoVoto');
+  aviso.classList.remove('mostrar');
+
+  const btn = document.getElementById('btnConfirmarVoto');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/lobby/votar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        codigo: CODIGO,
+        imagenId: IMAGEN_MOSTRADA,
+        usuario: NOMBRE,
+        voto: VOTO_SELECCIONADO,
+        adivinanza: REQUIERE_ADIVINANZA_ACTUAL ? ADIVINANZA_SELECCIONADA : null
+      })
+    });
+    const datos = await res.json();
+    if (!res.ok) {
+      aviso.textContent = datos.error || 'No se pudo registrar tu voto.';
+      aviso.classList.add('mostrar');
+      btn.disabled = false;
+      return;
+    }
+  } catch (e) {
+    aviso.textContent = 'Error de conexion con el servidor.';
+    aviso.classList.add('mostrar');
+    btn.disabled = false;
+    return;
+  }
+
+  await pollEstado();
+}
+
+function mostrarRevelacion(rev) {
+  if (!rev) return;
+  const autor = rev.subidoPor ? escaparHtml(rev.subidoPor) : 'el administrador';
+  document.getElementById('revelacionAutor').innerHTML = 'Esta imagen la subio <strong>' + autor + '</strong>';
+  document.getElementById('revelacionVotos').textContent =
+    rev.totalSi + ' voto(s) Si · ' + rev.totalNo + ' voto(s) No';
+
+  const cont = document.getElementById('revelacionAdivinanzas');
+  cont.innerHTML = '';
+  if (rev.subidoPor && rev.estadisticasAdivinanza && rev.estadisticasAdivinanza.length > 0) {
+    const titulo = document.createElement('div');
+    titulo.className = 'revelacion-adivinanzas-titulo';
+    titulo.textContent = '¿Quien creyeron que era?';
+    cont.appendChild(titulo);
+    rev.estadisticasAdivinanza
+      .slice()
+      .sort((a, b) => b.votos - a.votos)
+      .forEach(e => {
+        const correcto = e.nombre === rev.subidoPor;
+        const fila = document.createElement('div');
+        fila.className = 'fila-adivinanza' + (correcto ? ' correcto' : '');
+        fila.innerHTML = `<span>${escaparHtml(e.nombre)}${correcto ? ' ✓' : ''}</span><span>${e.votos}</span>`;
+        cont.appendChild(fila);
+      });
+  }
+}
+
+// ==================== RESULTADOS FINALES ====================
 
 async function verResultadosPublicos() {
   const res = await fetch('/api/lobby/resultados?codigo=' + encodeURIComponent(CODIGO));
@@ -208,10 +481,11 @@ async function verResultadosPublicos() {
   const cuerpo = document.getElementById('cuerpoTablaResultados');
   cuerpo.innerHTML = '';
   datos.imagenes.forEach(img => {
+    const autor = img.subidoPor ? escaparHtml(img.subidoPor) : 'Administrador';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><img src="${img.url}" alt=""></td>
-      <td>${escaparHtml(img.descripcion || '(sin descripcion)')}</td>
+      <td>${escaparHtml(img.descripcion || '(sin descripcion)')}<div class="meta-resultado">Subida por ${autor}</div></td>
       <td>${img.totalSi} si / ${img.totalNo} no</td>
       <td>
         <div class="barra-resultado"><div class="relleno" style="width:${img.porcentajeSi}%"></div></div>
@@ -222,12 +496,6 @@ async function verResultadosPublicos() {
   });
 
   mostrarVista('vistaResultados');
-}
-
-function escaparHtml(s) {
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
 }
 
 document.getElementById('nombreInput')?.addEventListener('keydown', function(e){

@@ -367,6 +367,118 @@ table.resultados img {
   padding: 40px 20px;
 }
 
+.meta-resultado {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 11.5px;
+  color: var(--texto-tenue);
+  margin-top: 4px;
+}
+
+/* Contador de subidas propias (carga) */
+.contador-subida {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 12.5px;
+  color: var(--texto-tenue);
+  margin-bottom: 4px;
+}
+
+/* Mensaje de espera (sala abierta / votando pendiente de los demas) */
+.espera-admin {
+  text-align: center;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 13.5px;
+  color: var(--texto-tenue);
+  padding: 20px;
+  border: 1px dashed var(--linea);
+  border-radius: var(--radio);
+  margin-top: 4px;
+}
+
+/* Insignia de fase en el panel de admin */
+.insignia-fase {
+  display: inline-block;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+.insignia-fase.carga { background: rgba(217, 164, 65, 0.15); color: var(--dorado); }
+.insignia-fase.votando { background: rgba(76, 175, 125, 0.15); color: #8fd6ac; }
+.insignia-fase.terminado { background: rgba(144, 153, 168, 0.15); color: var(--texto-tenue); }
+
+/* Chips para elegir quien subio la imagen */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.chip {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  background: var(--tinta);
+  border: 1px solid var(--linea);
+  color: var(--texto);
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.chip:hover { border-color: var(--texto-tenue); }
+.chip.seleccionado {
+  background: rgba(217, 164, 65, 0.15);
+  border-color: var(--dorado);
+  color: var(--dorado);
+}
+
+.botones-voto .boton.seleccionado {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+
+/* Panel de revelacion (autor real + estadisticas de adivinanza) */
+.revelacion {
+  background: var(--tinta);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-top: 4px;
+}
+.revelacion-autor {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--texto);
+}
+.revelacion-autor strong { color: var(--dorado); }
+.revelacion-votos {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--texto-tenue);
+  margin-bottom: 14px;
+}
+.revelacion-adivinanzas-titulo {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texto-tenue);
+  margin-bottom: 8px;
+}
+.fila-adivinanza {
+  display: flex;
+  justify-content: space-between;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 13.5px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--linea);
+  color: var(--texto);
+}
+.fila-adivinanza:last-child { border-bottom: none; }
+.fila-adivinanza.correcto { color: var(--verde); font-weight: 600; }
+
 @media (max-width: 600px) {
   h1 { font-size: 26px; }
   .panel { padding: 20px; }
