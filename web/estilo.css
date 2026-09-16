@@ -248,6 +248,58 @@ input[type="file"] {
   color: var(--texto-tenue);
 }
 
+.tarjeta-imagen .btn-borrar {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  color: #f0a89c;
+  background: none;
+  border: 1px solid rgba(224,97,79,0.35);
+  border-radius: 14px;
+  padding: 5px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.tarjeta-imagen .btn-borrar:hover { background: rgba(224,97,79,0.15); }
+.tarjeta-imagen .btn-borrar:disabled { opacity: 0.4; cursor: default; }
+
+/* Ranking de personas mas elegidas (grafica de barras en resultados) */
+.ranking-lista { display: flex; flex-direction: column; gap: 10px; }
+.ranking-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ranking-nombre {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--texto);
+  width: 110px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ranking-barra {
+  flex: 1;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--tinta-3);
+  overflow: hidden;
+}
+.ranking-barra .relleno {
+  height: 100%;
+  background: var(--dorado);
+}
+.ranking-votos {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  color: var(--texto-tenue);
+  width: 34px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 /* Pantalla de votacion */
 .contador {
   font-family: "Helvetica Neue", Arial, sans-serif;
