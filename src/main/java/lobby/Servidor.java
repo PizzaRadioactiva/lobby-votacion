@@ -40,12 +40,12 @@ public class Servidor {
         // --- Rutas de la API ---
         server.createContext("/api/admin/login", new AdminLoginHandler());
         server.createContext("/api/admin/crear-lobby", new CrearLobbyHandler());
-        server.createContext("/api/admin/subir-imagen", new SubirImagenAdminHandler());
         server.createContext("/api/admin/lobby", new AdminLobbyInfoHandler()); // /api/admin/lobby?codigo=xxx
         server.createContext("/api/admin/iniciar-votacion", new IniciarVotacionHandler());
+        server.createContext("/api/admin/eliminar-imagen", new EliminarImagenAdminHandler());
         server.createContext("/api/lobby/unirse", new UnirseLobbyHandler());
-        server.createContext("/api/lobby/info", new LobbyInfoHandler());       // /api/lobby/info?codigo=xxx
         server.createContext("/api/lobby/subir-imagen", new SubirImagenParticipanteHandler());
+        server.createContext("/api/lobby/eliminar-imagen", new EliminarImagenParticipanteHandler());
         server.createContext("/api/lobby/estado", new EstadoHandler());       // /api/lobby/estado?codigo=xxx&usuario=xxx
         server.createContext("/api/lobby/votar", new VotarHandler());
         server.createContext("/api/lobby/resultados", new ResultadosHandler());// /api/lobby/resultados?codigo=xxx
@@ -215,67 +215,6 @@ public class Servidor {
     }
 
     // ---------------------------------------------------------------
-    // Handler: subir imagen (ADMIN) -> POST multipart/form-data
-    // Campos esperados: clave, codigo, descripcion, archivo
-    // ---------------------------------------------------------------
-    static class SubirImagenAdminHandler implements HttpHandler {
-        public void handle(HttpExchange ex) throws IOException {
-            if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
-                responderError(ex, 405, "Metodo no permitido");
-                return;
-            }
-            String contentType = ex.getRequestHeaders().getFirst("Content-Type");
-            if (contentType == null || !contentType.contains("multipart/form-data")) {
-                responderError(ex, 400, "Se esperaba multipart/form-data");
-                return;
-            }
-            String boundary = extraerBoundary(contentType);
-            if (boundary == null) {
-                responderError(ex, 400, "Boundary no encontrado");
-                return;
-            }
-            byte[] cuerpo = leerCuerpoBytes(ex);
-            Map<String, String> camposTexto = new HashMap<>();
-            byte[][] archivoDatos = new byte[1][];
-            String[] archivoNombre = new String[1];
-
-            MultipartParser.parse(cuerpo, boundary, camposTexto, archivoDatos, archivoNombre);
-
-            String clave = camposTexto.get("clave");
-            if (!CLAVE_ADMIN.equals(clave)) {
-                responderError(ex, 401, "No autorizado");
-                return;
-            }
-            String codigo = camposTexto.get("codigo");
-            String descripcion = camposTexto.getOrDefault("descripcion", "");
-
-            Lobby lobby = almacen.obtener(codigo);
-            if (lobby == null) {
-                responderError(ex, 404, "Lobby no encontrado");
-                return;
-            }
-            if (!"carga".equals(lobby.fase)) {
-                responderError(ex, 409, "La votacion ya fue iniciada, no se pueden agregar mas imagenes");
-                return;
-            }
-            if (archivoDatos[0] == null || archivoDatos[0].length == 0) {
-                responderError(ex, 400, "No se recibio ninguna imagen");
-                return;
-            }
-
-            String nombreArchivo = guardarArchivo(archivoDatos[0], archivoNombre[0]);
-            String idImagen = nombreArchivo.contains(".") ? nombreArchivo.substring(0, nombreArchivo.indexOf('.')) : nombreArchivo;
-
-            Imagen img = new Imagen(idImagen, nombreArchivo, descripcion, null);
-            synchronized (lobby) {
-                lobby.imagenes.add(img);
-            }
-
-            responderJson(ex, 200, "{\"ok\":true,\"id\":\"" + idImagen + "\"}");
-        }
-    }
-
-    // ---------------------------------------------------------------
     // Handler: subir imagen (PARTICIPANTE) -> POST multipart/form-data
     // Campos esperados: codigo, nombre, descripcion, archivo
     // Sin clave de admin. Maximo Modelos.MAX_IMAGENES_POR_PARTICIPANTE por persona.
@@ -363,6 +302,96 @@ public class Servidor {
         Path destino = carpetaImagenes.resolve(nombreArchivo);
         Files.write(destino, datos);
         return nombreArchivo;
+    }
+
+    /** Quita la imagen del lobby y borra el archivo del disco. Se asume que ya se valido el permiso y la fase. */
+    private static void borrarImagen(Lobby lobby, Imagen img) {
+        synchronized (lobby) {
+            lobby.imagenes.remove(img);
+        }
+        try {
+            Files.deleteIfExists(carpetaImagenes.resolve(img.nombreArchivo));
+        } catch (IOException e) {
+            // si no se puede borrar el archivo fisico no es grave, ya quedo fuera del lobby
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Handler: eliminar imagen (PARTICIPANTE) -> POST { "codigo":"...", "imagenId":"...", "nombre":"..." }
+    // Solo puede borrar sus propias imagenes, y solo mientras el lobby esta en fase "carga".
+    // ---------------------------------------------------------------
+    static class EliminarImagenParticipanteHandler implements HttpHandler {
+        public void handle(HttpExchange ex) throws IOException {
+            if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                responderError(ex, 405, "Metodo no permitido");
+                return;
+            }
+            String body = leerCuerpo(ex);
+            String codigo = extraerCampo(body, "codigo");
+            String imagenId = extraerCampo(body, "imagenId");
+            String nombre = extraerCampo(body, "nombre");
+
+            Lobby lobby = almacen.obtener(codigo);
+            if (lobby == null) {
+                responderError(ex, 404, "Lobby no encontrado");
+                return;
+            }
+            if (!"carga".equals(lobby.fase)) {
+                responderError(ex, 409, "Ya no se pueden borrar imagenes, la votacion ya empezo");
+                return;
+            }
+            Imagen img = lobby.buscarImagen(imagenId);
+            if (img == null) {
+                responderError(ex, 404, "Imagen no encontrada");
+                return;
+            }
+            if (nombre == null || !nombre.equals(img.subidoPor)) {
+                responderError(ex, 403, "Solo podes borrar tus propias imagenes");
+                return;
+            }
+
+            borrarImagen(lobby, img);
+            responderJson(ex, 200, "{\"ok\":true}");
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Handler: eliminar imagen (ADMIN, moderacion) -> POST { "clave":"...", "codigo":"...", "imagenId":"..." }
+    // Puede borrar cualquier imagen del lobby, mientras siga en fase "carga".
+    // ---------------------------------------------------------------
+    static class EliminarImagenAdminHandler implements HttpHandler {
+        public void handle(HttpExchange ex) throws IOException {
+            if (!ex.getRequestMethod().equalsIgnoreCase("POST")) {
+                responderError(ex, 405, "Metodo no permitido");
+                return;
+            }
+            String body = leerCuerpo(ex);
+            String clave = extraerCampo(body, "clave");
+            if (!CLAVE_ADMIN.equals(clave)) {
+                responderError(ex, 401, "No autorizado");
+                return;
+            }
+            String codigo = extraerCampo(body, "codigo");
+            String imagenId = extraerCampo(body, "imagenId");
+
+            Lobby lobby = almacen.obtener(codigo);
+            if (lobby == null) {
+                responderError(ex, 404, "Lobby no encontrado");
+                return;
+            }
+            if (!"carga".equals(lobby.fase)) {
+                responderError(ex, 409, "Ya no se pueden borrar imagenes, la votacion ya empezo");
+                return;
+            }
+            Imagen img = lobby.buscarImagen(imagenId);
+            if (img == null) {
+                responderError(ex, 404, "Imagen no encontrada");
+                return;
+            }
+
+            borrarImagen(lobby, img);
+            responderJson(ex, 200, "{\"ok\":true}");
+        }
     }
 
     private static String extraerBoundary(String contentType) {
@@ -472,23 +501,6 @@ public class Servidor {
     }
 
     // ---------------------------------------------------------------
-    // Handler: info publica del lobby (lista completa, no sincronizada)
-    // GET /api/lobby/info?codigo=xxx
-    // ---------------------------------------------------------------
-    static class LobbyInfoHandler implements HttpHandler {
-        public void handle(HttpExchange ex) throws IOException {
-            Map<String, String> q = parseQuery(ex.getRequestURI().getQuery());
-            String codigo = q.get("codigo");
-            Lobby lobby = almacen.obtener(codigo);
-            if (lobby == null) {
-                responderError(ex, 404, "Lobby no encontrado");
-                return;
-            }
-            responderJson(ex, 200, lobbyAJson(lobby, false));
-        }
-    }
-
-    // ---------------------------------------------------------------
     // Handler: estado sincronizado de la votacion (polling desde votar.html)
     // GET /api/lobby/estado?codigo=xxx&usuario=xxx
     // ---------------------------------------------------------------
@@ -514,9 +526,12 @@ public class Servidor {
                     sb.append(",\"totalImagenes\":").append(lobby.imagenes.size()).append(",");
                     sb.append("\"misImagenes\":").append(lobby.totalSubidasDe(usuario)).append(",");
                     sb.append("\"maxImagenes\":").append(Modelos.MAX_IMAGENES_POR_PARTICIPANTE).append(",");
+                    // Cada participante solo ve sus propias imagenes aca (no las de los demas),
+                    // para no arruinar el juego de "adivinar quien la subio" antes de votar.
                     sb.append("\"imagenes\":[");
                     boolean primero = true;
                     for (Imagen img : lobby.imagenes) {
+                        if (usuario == null || !usuario.equals(img.subidoPor)) continue;
                         if (!primero) sb.append(",");
                         primero = false;
                         sb.append("{\"id\":\"").append(img.id).append("\",");
@@ -671,6 +686,10 @@ public class Servidor {
                 responderError(ex, 404, "Lobby no encontrado");
                 return;
             }
+            if (!"terminado".equals(lobby.fase)) {
+                responderError(ex, 409, "Los resultados se ven recien cuando termina la votacion");
+                return;
+            }
 
             StringBuilder sb = new StringBuilder();
             sb.append("{\"ok\":true,\"nombre\":\"").append(escaparJson(lobby.nombre)).append("\",");
@@ -709,7 +728,28 @@ public class Servidor {
                 sb.append("]");
                 sb.append("}");
             }
-            sb.append("]}");
+            sb.append("],");
+
+            // Ranking agregado: cuantas veces fue elegida cada persona como "autor sospechoso" en total.
+            Map<String, Integer> rankingElegidos = new LinkedHashMap<>();
+            for (Imagen img : lobby.imagenes) {
+                for (Map.Entry<String, Integer> e : img.estadisticasAdivinanzas().entrySet()) {
+                    rankingElegidos.merge(e.getKey(), e.getValue(), Integer::sum);
+                }
+            }
+            List<Map.Entry<String, Integer>> rankingOrdenado = new ArrayList<>(rankingElegidos.entrySet());
+            rankingOrdenado.sort((a, b) -> b.getValue() - a.getValue());
+            sb.append("\"rankingElegidos\":[");
+            boolean p4 = true;
+            for (Map.Entry<String, Integer> e : rankingOrdenado) {
+                if (!p4) sb.append(",");
+                p4 = false;
+                sb.append("{\"nombre\":\"").append(escaparJson(e.getKey())).append("\",");
+                sb.append("\"votos\":").append(e.getValue()).append("}");
+            }
+            sb.append("]");
+
+            sb.append("}");
 
             responderJson(ex, 200, sb.toString());
         }
