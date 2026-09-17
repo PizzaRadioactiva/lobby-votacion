@@ -537,3 +537,72 @@ table.resultados img {
   .tarjeta-imagen { flex-direction: column; align-items: flex-start; }
   .tarjeta-imagen img { width: 100%; height: 140px; }
 }
+
+/* =========================================================
+   Pantalla de votacion compacta: que el titulo, la imagen y
+   los botones de voto entren sin necesidad de scroll.
+   ========================================================= */
+.envoltura.envoltura-votacion {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px 10px;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.envoltura-votacion .marca { margin-bottom: 14px; flex-shrink: 0; }
+
+#vistaVotar {
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#vistaVotar .contador { flex-shrink: 0; margin-bottom: 8px; }
+
+#vistaVotar .boleta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+}
+
+#vistaVotar .marco-imagen {
+  flex: 1 1 auto;
+  min-height: 120px;
+  aspect-ratio: auto;
+}
+
+#vistaVotar .cuerpo {
+  flex-shrink: 0;
+  padding: 14px 18px 16px;
+  overflow-y: auto;
+  max-height: 52vh;
+  max-height: 52dvh;
+}
+
+#vistaVotar .descripcion { font-size: 16px; line-height: 1.35; margin: 0 0 12px; }
+
+#vistaVotar .botones-voto { gap: 10px; }
+#vistaVotar .botones-voto .boton { padding: 12px; font-size: 14.5px; }
+
+#vistaVotar #bloqueAdivinanza label { margin-top: 12px; margin-bottom: 6px; }
+#vistaVotar .chips { gap: 6px; }
+#vistaVotar .chip { padding: 6px 12px; font-size: 12.5px; }
+
+#vistaVotar .fila-botones { margin-top: 12px; }
+
+#vistaVotar .espera-admin { padding: 14px; margin-top: 4px; font-size: 13px; }
+
+#vistaVotar .revelacion { padding: 14px 16px; margin-top: 4px; }
+#vistaVotar .revelacion-autor { font-size: 15.5px; margin-bottom: 6px; }
+#vistaVotar .revelacion-votos { font-size: 12.5px; margin-bottom: 10px; }
+#vistaVotar .fila-adivinanza { padding: 6px 0; font-size: 13px; }
+
+@media (max-height: 700px) {
+  #vistaVotar .descripcion { font-size: 15px; margin-bottom: 8px; }
+  #vistaVotar .botones-voto .boton { padding: 10px; font-size: 14px; }
+  #vistaVotar .cuerpo { padding: 10px 16px 12px; }
+}
