@@ -543,10 +543,21 @@ table.resultados img {
    el titulo y los botones de votar queden a la vista sin scroll.
    ========================================================= */
 .envoltura.envoltura-votacion {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
   padding: 18px 16px 24px;
 }
 
 .envoltura-votacion .marca { margin-bottom: 14px; }
+
+#vistaVotar {
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+}
 
 #vistaVotar .contador { margin-bottom: 8px; }
 
