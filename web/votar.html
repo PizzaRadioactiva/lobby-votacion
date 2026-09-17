@@ -156,8 +156,7 @@ let FASE_ANTERIOR = null;
 
 function mostrarVista(id) {
   ['vistaNombre','vistaCarga','vistaVotar','vistaFin','vistaResultados'].forEach(v => {
-    const visible = (v === id);
-    document.getElementById(v).style.display = visible ? (v === 'vistaVotar' ? 'flex' : 'block') : 'none';
+    document.getElementById(v).style.display = (v === id) ? 'block' : 'none';
   });
 }
 

@@ -539,49 +539,23 @@ table.resultados img {
 }
 
 /* =========================================================
-   Pantalla de votacion compacta: que el titulo, la imagen y
-   los botones de voto entren sin necesidad de scroll.
+   Pantalla de votacion: imagen con una altura acotada para que
+   el titulo y los botones de votar queden a la vista sin scroll.
    ========================================================= */
 .envoltura.envoltura-votacion {
-  display: flex;
-  flex-direction: column;
-  padding: 16px 16px 10px;
-  min-height: 100vh;
-  min-height: 100dvh;
+  padding: 18px 16px 24px;
 }
 
-.envoltura-votacion .marca { margin-bottom: 14px; flex-shrink: 0; }
+.envoltura-votacion .marca { margin-bottom: 14px; }
 
-#vistaVotar {
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-}
-
-#vistaVotar .contador { flex-shrink: 0; margin-bottom: 8px; }
-
-#vistaVotar .boleta {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  margin-bottom: 0;
-  overflow: hidden;
-}
+#vistaVotar .contador { margin-bottom: 8px; }
 
 #vistaVotar .marco-imagen {
-  flex: 1 1 auto;
-  min-height: 120px;
   aspect-ratio: auto;
+  height: clamp(280px, 44vh, 560px);
 }
 
-#vistaVotar .cuerpo {
-  flex-shrink: 0;
-  padding: 14px 18px 16px;
-  overflow-y: auto;
-  max-height: 52vh;
-  max-height: 52dvh;
-}
+#vistaVotar .cuerpo { padding: 14px 18px 16px; }
 
 #vistaVotar .descripcion { font-size: 16px; line-height: 1.35; margin: 0 0 12px; }
 
@@ -601,7 +575,8 @@ table.resultados img {
 #vistaVotar .revelacion-votos { font-size: 12.5px; margin-bottom: 10px; }
 #vistaVotar .fila-adivinanza { padding: 6px 0; font-size: 13px; }
 
-@media (max-height: 700px) {
+@media (max-height: 800px) {
+  #vistaVotar .marco-imagen { height: clamp(220px, 36vh, 420px); }
   #vistaVotar .descripcion { font-size: 15px; margin-bottom: 8px; }
   #vistaVotar .botones-voto .boton { padding: 10px; font-size: 14px; }
   #vistaVotar .cuerpo { padding: 10px 16px 12px; }
